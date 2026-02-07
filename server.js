@@ -9,11 +9,11 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 app.use(express.json());
 
-// Supabase setup
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_KEY || ''
-);
+// Supabase setup (optional - will use in-memory config if not available)
+let supabase = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+  supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+}
 
 // Contract addresses (Base mainnet)
 const CONTRACT_ADDRESS = process.env.UBI_CONTRACT || '0x0000000000000000000000000000000000000000'; // Deploy pending
@@ -32,6 +32,7 @@ let config = {
 
 // Store in Supabase if available
 async function loadConfig() {
+  if (!supabase) return; // Use default in-memory config
   try {
     const { data } = await supabase.from('ubi_config').select('*').single();
     if (data) config = { ...config, ...data.config };
@@ -41,6 +42,7 @@ async function loadConfig() {
 }
 
 async function saveConfig() {
+  if (!supabase) return; // Config stays in memory only
   try {
     await supabase.from('ubi_config').upsert({ id: 1, config, updated_at: new Date().toISOString() });
   } catch (e) {
